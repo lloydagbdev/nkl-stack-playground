@@ -32,7 +32,7 @@ pub fn renderLanding(allocator: std.mem.Allocator, model: LandingModel) ![]u8 {
 
     const doc = try builder.document(.{
         .lang = "en",
-        .head = try commonHead(builder, "nkl Stack Playground"),
+        .head = try commonHeadStatic(builder, "nkl Stack Playground"),
         .body = &.{
             try h.main(&.{try h.class("page")}, &.{
                 try hero(builder, model.service_name, "nkl Stack Playground", "Manual playground for the current nkl substrate."),
@@ -69,7 +69,7 @@ pub fn renderFormDemo(allocator: std.mem.Allocator, model: FormModel) ![]u8 {
 
     const doc = try builder.document(.{
         .lang = "en",
-        .head = try commonHead(builder, title),
+        .head = try commonHeadStatic(builder, title),
         .body = &.{
             try h.main(&.{try h.class("page")}, &.{
                 try hero(builder, model.service_name, title, lead),
@@ -182,6 +182,16 @@ pub fn renderSvgLab(allocator: std.mem.Allocator, model: SvgLabModel) ![]u8 {
 
 fn commonHead(builder: builder_mod.Builder, title: []const u8) ![]const nkl_html.ir.Node {
     return commonHeadWithScript(builder, title, "/assets/app.js");
+}
+
+fn commonHeadStatic(builder: builder_mod.Builder, title: []const u8) ![]const nkl_html.ir.Node {
+    const h = helpers.bind(builder);
+    var head = builder.nodeList();
+    try head.append(try builder.element(.meta, &.{try h.attr("charset", "utf-8")}, &.{}));
+    try head.append(try builder.element(.meta, &.{ try h.name("viewport"), try h.content("width=device-width, initial-scale=1") }, &.{}));
+    try head.append(try builder.element(.title, &.{}, &.{try h.text(title)}));
+    try head.append(try builder.element(.link, &.{ try h.rel("stylesheet"), try h.href("/assets/site.css") }, &.{}));
+    return head.freeze();
 }
 
 fn commonHeadWithScript(builder: builder_mod.Builder, title: []const u8, script_src: []const u8) ![]const nkl_html.ir.Node {

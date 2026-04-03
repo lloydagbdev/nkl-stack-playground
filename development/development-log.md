@@ -251,6 +251,41 @@
   - `zig build`
   - `zig build test`
 
+## 2026-04-03 - route script mismatch cleanup
+
+- Browser warnings reported from manual testing were caused by a route/script
+  mismatch, not by a failing Wasm bridge.
+- The SSR enhancement bundle at `/assets/app.js` expects the DOM contract from
+  `/ssr`, including elements such as:
+  - `#wasm-status`
+  - `#fetch-button`
+  - `#initial-count`
+  - `#count-value`
+  - `#stored-message`
+- Initially, the landing page `/` also loaded that bundle, which caused
+  warnings because those IDs do not exist on the plain SSR landing page.
+- That issue was corrected earlier by moving `/` to a static head path with no
+  SSR demo script.
+- The same pattern also existed on `/form`, which was still using the scripted
+  shared head even though the form page is intended to stay server-owned.
+
+### Fix
+
+- Moved `/form` to the same static head path as `/`.
+- Current script loading is now explicit by route:
+  - `/` loads no Wasm app
+  - `/form` loads no Wasm app
+  - `/ssr` loads `/assets/app.js`
+  - `/lab/svg` loads `/assets/svg_app.js`
+
+### Result
+
+- Re-verified after the route/script cleanup with:
+  - `zig build`
+  - `zig build test`
+- This removes spurious browser console warnings on routes that are not meant
+  to participate in the SSR enhancement demo.
+
 ## Follow-On Ideas
 
 - Add a small form-oriented page to compare document-heavy SSR with more
