@@ -3,7 +3,9 @@ const nkl_html = @import("nkl_html");
 
 const builder_mod = nkl_html.builder_tree;
 const helpers = nkl_html.helpers;
+const ir = nkl_html.ir;
 const render = nkl_html.render;
+const stream_mod = nkl_html.stream;
 
 pub const LandingModel = struct {
     service_name: []const u8,
@@ -15,6 +17,10 @@ pub const SsrModel = struct {
 };
 
 pub const SvgLabModel = struct {
+    service_name: []const u8,
+};
+
+pub const StreamModel = struct {
     service_name: []const u8,
 };
 
@@ -41,6 +47,7 @@ pub fn renderLanding(allocator: std.mem.Allocator, model: LandingModel) ![]u8 {
                     try h.div(&.{try h.class("mode-grid")}, &.{
                         try modeCard(builder, "/ssr", "SSR + Wasm", "Server-rendered page with explicit Wasm enhancement, storage, fetch, and history updates."),
                         try modeCard(builder, "/form", "SSR Form", "Document-heavy SSR route with a real POST handled through nkl-http form helpers and a redirect back to the page."),
+                        try modeCard(builder, "/stream", "SSR Stream", "Writer-oriented server-rendered page built with nkl_html.stream instead of retained document IR."),
                         try modeCard(builder, "/lab/svg", "CSR / SPA SVG Lab", "Client-owned interactive SVG page built over the same host bridge and HTTP surface."),
                     }),
                 }),
@@ -180,6 +187,51 @@ pub fn renderSvgLab(allocator: std.mem.Allocator, model: SvgLabModel) ![]u8 {
     return renderDoc(allocator, doc);
 }
 
+pub fn renderStreamDemo(allocator: std.mem.Allocator, model: StreamModel) ![]u8 {
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+
+    var html = stream_mod.Stream(@TypeOf(&output.writer)).init(&output.writer, .pretty);
+    try html.documentStart("en");
+
+    try html.open(.head, &.{});
+    try html.leaf(.meta, &.{ir.attr("charset", "utf-8")});
+    try html.leaf(.meta, &.{ ir.attr("name", "viewport"), ir.attr("content", "width=device-width, initial-scale=1") });
+    try html.elementText(.title, &.{}, "nkl Stack Playground: Stream");
+    try html.leaf(.link, &.{ ir.attr("rel", "stylesheet"), ir.attr("href", "/assets/site.css") });
+    try html.close(.head);
+
+    try html.open(.body, &.{});
+    try html.open(.main, &.{ir.attr("class", "page")});
+    try html.raw(try heroHtml(allocator, model.service_name, "nkl Stack Playground: Stream", "Server-rendered page written with nkl_html.stream instead of retained IR."));
+    try html.raw(try navHtml(allocator));
+
+    try html.open(.section, &.{ir.attr("class", "panel")});
+    try html.elementText(.h2, &.{}, "Direct writer-oriented HTML");
+    try html.elementText(.p, &.{ir.attr("class", "panel-copy")}, "This route demonstrates nkl_html.stream. It writes HTML directly into a request-scoped buffer instead of building a retained document tree first.");
+    try html.open(.ul, &.{ir.attr("class", "library-list")});
+    try html.elementText(.li, &.{}, "No builder_tree document is materialized for this page.");
+    try html.elementText(.li, &.{}, "Normal text still goes through HTML escaping.");
+    try html.elementText(.li, &.{}, "With the current nkl-http surface, the result is still buffered before request.respond(...).");
+    try html.close(.ul);
+    try html.close(.section);
+
+    try html.open(.section, &.{ir.attr("class", "panel")});
+    try html.elementText(.h2, &.{}, "Where it fits");
+    try html.open(.div, &.{ir.attr("class", "mode-grid")});
+    try streamModeCard(&html, "/form", "Tree-backed form page", "Good when helper-bound retained structure keeps document assembly clearer.");
+    try streamModeCard(&html, "/stream", "Writer-oriented page", "Good for request-scoped pages where retained IR is unnecessary.");
+    try streamModeCard(&html, "/ssr", "SSR + Wasm page", "Still tree-backed here because the structured SSR-to-Wasm handoff is easier to author that way.");
+    try html.close(.div);
+    try html.close(.section);
+
+    try html.close(.main);
+    try html.close(.body);
+    try html.documentEnd();
+
+    return try allocator.dupe(u8, output.writer.buffered());
+}
+
 fn commonHead(builder: builder_mod.Builder, title: []const u8) ![]const nkl_html.ir.Node {
     return commonHeadWithScript(builder, title, "/assets/app.js");
 }
@@ -220,6 +272,7 @@ fn navRow(builder: builder_mod.Builder) !nkl_html.ir.Node {
         try h.a(&.{ try h.class("nav-link"), try h.href("/") }, &.{try h.text("Landing")}),
         try h.a(&.{ try h.class("nav-link"), try h.href("/ssr") }, &.{try h.text("SSR + Wasm")}),
         try h.a(&.{ try h.class("nav-link"), try h.href("/form") }, &.{try h.text("Form")}),
+        try h.a(&.{ try h.class("nav-link"), try h.href("/stream") }, &.{try h.text("Stream")}),
         try h.a(&.{ try h.class("nav-link"), try h.href("/lab/svg") }, &.{try h.text("SVG Lab")}),
     });
 }
@@ -237,6 +290,32 @@ fn renderDoc(allocator: std.mem.Allocator, doc: nkl_html.ir.Document) ![]u8 {
     defer output.deinit();
     try render.prettyDocument(&output.writer, doc);
     return try allocator.dupe(u8, output.writer.buffered());
+}
+
+fn heroHtml(allocator: std.mem.Allocator, service_name: []const u8, title: []const u8, lead: []const u8) ![]u8 {
+    const builder = builder_mod.Builder.init(allocator);
+    const node = try hero(builder, service_name, title, lead);
+    return renderNodeHtml(allocator, node);
+}
+
+fn navHtml(allocator: std.mem.Allocator) ![]u8 {
+    const builder = builder_mod.Builder.init(allocator);
+    const node = try navRow(builder);
+    return renderNodeHtml(allocator, node);
+}
+
+fn renderNodeHtml(allocator: std.mem.Allocator, node: nkl_html.ir.Node) ![]u8 {
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+    try render.prettyNode(&output.writer, node, 0);
+    return try allocator.dupe(u8, output.writer.buffered());
+}
+
+fn streamModeCard(html: anytype, href: []const u8, title: []const u8, body: []const u8) !void {
+    try html.open(.a, &.{ ir.attr("class", "mode-card"), ir.attr("href", href) });
+    try html.elementText(.h3, &.{}, title);
+    try html.elementText(.p, &.{}, body);
+    try html.close(.a);
 }
 
 fn formField(builder: builder_mod.Builder, label: []const u8, name: []const u8, input_type: []const u8, value: []const u8, placeholder: []const u8) !nkl_html.ir.Node {

@@ -26,6 +26,7 @@ app shape.
 - `GET /ssr`
 - `GET /form`
 - `POST /form`
+- `GET /stream`
 - `GET /lab/svg`
 - `GET /api/message`
 - `GET /api/svg-points`
@@ -61,6 +62,8 @@ http://127.0.0.1:8088/
 - `/ssr` is SSR first, then Wasm-enhanced.
 - `/form` is a document-heavy SSR page with a real form POST handled through
   `nkl-http` body helpers.
+- `/stream` is an SSR page built with `nkl_html.stream` instead of a retained
+  IR document.
 - `/lab/svg` is CSR/SPA-style and lets Wasm own the interactive SVG view.
 
 If you want a larger playground later, add more routes or replace the page

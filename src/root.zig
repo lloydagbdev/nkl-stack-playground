@@ -65,6 +65,18 @@ pub fn handleRequest(
         return .{ .body_state = .responded };
     }
 
+    if ((req.head.method == .GET or req.head.method == .HEAD) and std.mem.eql(u8, target, "/stream")) {
+        const html = try page.renderStreamDemo(allocator, .{
+            .service_name = ctx.service_name,
+        });
+        try req.respond(html, .{
+            .extra_headers = &.{
+                .{ .name = "Content-Type", .value = "text/html; charset=utf-8" },
+            },
+        });
+        return .{ .body_state = .responded };
+    }
+
     if (req.head.method == .POST and std.mem.eql(u8, target, "/form")) {
         const body = nkl_http.body.readAllAlloc(allocator, req, 8192) catch |err| switch (err) {
             error.RequestBodyTooLarge => {

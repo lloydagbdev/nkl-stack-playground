@@ -333,6 +333,34 @@
   `deployment/artifacts/`, and installed on the VPS through Podman Quadlet with
   the same operator workflow as `nkl-filebrowser`.
 
+## 2026-04-03 - dedicated nkl-html stream page
+
+- Added a dedicated `/stream` route so the playground now demonstrates both
+  major SSR authoring paths from `nkl-html`:
+  - retained tree-backed document composition
+  - direct writer-oriented HTML streaming
+- Chose to add a separate route instead of rewriting `/` or `/form`, because
+  the playground is more useful when the rendering modes stay explicit and
+  directly comparable.
+
+### Decision
+
+- The current `nkl-http` surface still ends in `request.respond(...)`, so the
+  stream page currently writes into a request-scoped allocating writer and then
+  responds with the buffered result.
+- That still demonstrates the intended `nkl_html.stream` programming model
+  honestly without pretending the app has a direct socket-streaming HTML
+  response path today.
+
+### Result
+
+- The route set now covers:
+  - plain SSR
+  - retained SSR form handling
+  - writer-oriented SSR streaming
+  - SSR plus Wasm enhancement
+  - CSR/SPA-style Wasm rendering
+
 ## Follow-On Ideas
 
 - Add a small form-oriented page to compare document-heavy SSR with more
