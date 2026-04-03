@@ -1,0 +1,7 @@
+[Unit]
+Description=nkl-stack-playground Quadlet network
+
+[Network]
+NetworkName=nkl-stack-playground
+Driver=bridge
+Label=app=nkl-stack-playground

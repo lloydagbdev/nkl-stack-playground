@@ -1,0 +1,8 @@
+.git
+.zig-cache
+zig-out
+src
+development
+README.md
+build.zig
+build.zig.zon

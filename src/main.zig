@@ -14,7 +14,7 @@ pub fn main(init: std.process.Init) !void {
     const allocator = std.heap.smp_allocator;
     const io = init.io;
     const args = try init.minimal.args.toSlice(allocator);
-    const config = try parseArgs(args);
+    const config = try parseArgs(init.environ_map, args);
 
     const context = app.AppContext{};
     const Runtime = nkl_http.Runtime(app.AppContext);
@@ -52,8 +52,8 @@ pub fn main(init: std.process.Init) !void {
     try runtime.run();
 }
 
-fn parseArgs(args: []const []const u8) !Config {
-    var config = Config{};
+fn parseArgs(environ_map: *std.process.Environ.Map, args: []const []const u8) !Config {
+    var config = configFromEnv(environ_map);
     var index: usize = 1;
 
     while (index < args.len) : (index += 1) {
@@ -80,9 +80,41 @@ fn parseArgs(args: []const []const u8) !Config {
     return config;
 }
 
+fn configFromEnv(environ_map: *std.process.Environ.Map) Config {
+    var config = Config{};
+
+    if (environ_map.get("HOST")) |host| {
+        config.host = host;
+    }
+
+    if (environ_map.get("PORT")) |port_text| {
+        config.port = std.fmt.parseUnsigned(u16, port_text, 10) catch config.port;
+    }
+
+    if (environ_map.get("HEADER_TIMEOUT_MS")) |value| {
+        config.header_timeout_ms = std.fmt.parseUnsigned(u64, value, 10) catch config.header_timeout_ms;
+    }
+
+    if (environ_map.get("IDLE_TIMEOUT_MS")) |value| {
+        config.idle_timeout_ms = std.fmt.parseUnsigned(u64, value, 10) catch config.idle_timeout_ms;
+    }
+
+    if (environ_map.get("BODY_TIMEOUT_MS")) |value| {
+        config.body_timeout_ms = std.fmt.parseUnsigned(u64, value, 10) catch config.body_timeout_ms;
+    }
+
+    return config;
+}
+
 fn printUsage() void {
     std.debug.print(
         \\usage: nkl-stack-playground [--host <host>] [--port <port>]
+        \\env:
+        \\  HOST
+        \\  PORT
+        \\  HEADER_TIMEOUT_MS
+        \\  IDLE_TIMEOUT_MS
+        \\  BODY_TIMEOUT_MS
         \\routes:
         \\  GET  /            -> SSR landing page
         \\  GET  /ssr         -> SSR + Wasm enhancement page

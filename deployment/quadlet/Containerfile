@@ -1,0 +1,7 @@
+FROM scratch
+
+COPY artifacts/nkl-stack-playground /usr/local/bin/nkl-stack-playground
+
+EXPOSE 2888
+
+ENTRYPOINT ["/usr/local/bin/nkl-stack-playground"]

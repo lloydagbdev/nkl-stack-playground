@@ -1,0 +1,20 @@
+[Unit]
+Description=nkl-stack-playground container
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+ContainerName=nkl-stack-playground
+Image=nkl-stack-playground.build
+Network=nkl-stack-playground.network
+PublishPort=127.0.0.1:2888:2888
+EnvironmentFile=./nkl-stack-playground.env
+AutoUpdate=local
+
+[Service]
+Restart=on-failure
+RestartSec=2s
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target

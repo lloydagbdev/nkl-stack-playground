@@ -1,0 +1,8 @@
+[Unit]
+Description=Build local nkl-stack-playground container image
+
+[Build]
+ImageTag=localhost/nkl-stack-playground:latest
+File=Containerfile
+SetWorkingDirectory=.
+Network=none

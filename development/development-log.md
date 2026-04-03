@@ -286,6 +286,53 @@
 - This removes spurious browser console warnings on routes that are not meant
   to participate in the SSR enhancement demo.
 
+## 2026-04-03 - deployment bundle for live demo hosting
+
+- Added a `deployment/` directory so the playground can be hosted on the VPS as
+  the live demo application for the current `nkl-*` ecosystem.
+- Chose to follow the same Quadlet deployment pattern already used by
+  `nkl-filebrowser` instead of inventing a second hosting shape.
+- Added:
+  - `deployment/README.md`
+  - `deployment/artifacts/README.md`
+  - `deployment/prepare-quadlet-release.sh`
+  - `deployment/quadlet/Containerfile`
+  - `deployment/quadlet/.containerignore`
+  - `deployment/quadlet/nkl-stack-playground.build`
+  - `deployment/quadlet/nkl-stack-playground.container`
+  - `deployment/quadlet/nkl-stack-playground.env`
+  - `deployment/quadlet/nkl-stack-playground.network`
+
+### Runtime Adjustment
+
+- The playground binary originally only supported `--host` and `--port` CLI
+  flags.
+- To fit the Quadlet deployment pattern cleanly, added runtime environment
+  support for:
+  - `HOST`
+  - `PORT`
+  - `HEADER_TIMEOUT_MS`
+  - `IDLE_TIMEOUT_MS`
+  - `BODY_TIMEOUT_MS`
+- CLI flags still work and override the environment-backed defaults after the
+  initial env load.
+
+### Deployment Shape
+
+- The deployment bundle intentionally stays simpler than `nkl-filebrowser`:
+  - no content volume
+  - no writable application root
+  - no auth or content-path env surface
+- That is intentional because `nkl-stack-playground` is a stateless live demo
+  app with embedded assets and demo routes rather than a storage-backed
+  product.
+
+### Result
+
+- The playground can now be packaged as a static musl binary, staged into
+  `deployment/artifacts/`, and installed on the VPS through Podman Quadlet with
+  the same operator workflow as `nkl-filebrowser`.
+
 ## Follow-On Ideas
 
 - Add a small form-oriented page to compare document-heavy SSR with more
