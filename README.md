@@ -28,6 +28,12 @@ app shape.
 - `POST /form`
 - `GET /stream`
 - `GET /lab/svg`
+- `GET /api/health`
+- `GET /api/demo/info`
+- `POST /api/demo/echo`
+- `DELETE /api/demo/reset`
+- `GET /api/demo/ops`
+- `GET /demo/file`
 - `GET /api/message`
 - `GET /api/svg-points`
 - `GET /assets/app.js`
@@ -65,6 +71,10 @@ http://127.0.0.1:8088/
 - `/stream` is an SSR page built with `nkl_html.stream` instead of a retained
   IR document.
 - `/lab/svg` is CSR/SPA-style and lets Wasm own the interactive SVG view.
+- `/api/health` is a simple JSON health endpoint suitable for uptime checks.
+- `/api/demo/*` exercises JSON responses, bounded body reads, empty responses,
+  and runtime stats.
+- `/demo/file` exercises `nkl-http` conditional and range-aware file serving.
 
 If you want a larger playground later, add more routes or replace the page
 without treating this directory as a product codebase.

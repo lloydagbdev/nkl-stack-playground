@@ -16,8 +16,11 @@ pub fn main(init: std.process.Init) !void {
     const args = try init.minimal.args.toSlice(allocator);
     const config = try parseArgs(init.environ_map, args);
 
-    const context = app.AppContext{};
-    const Runtime = nkl_http.Runtime(app.AppContext);
+    var shared_stats = app.SharedStats{};
+    const context = app.AppContext{
+        .stats = &shared_stats,
+    };
+    const Runtime = app.RuntimeType;
     const hooks = nkl_http.Hooks{
         .on_listening = struct {
             fn call(event: nkl_http.ListenEvent) void {
@@ -30,6 +33,42 @@ pub fn main(init: std.process.Init) !void {
         .on_shutdown = struct {
             fn call(_: nkl_http.ShutdownEvent) void {
                 std.debug.print("stack playground stopping\n", .{});
+            }
+        }.call,
+        .on_request_start = struct {
+            fn call(_: nkl_http.RequestStartEvent) void {
+                const stats = app.global_stats orelse return;
+                _ = stats.requests_started.fetchAdd(1, .monotonic);
+            }
+        }.call,
+        .on_request_complete = struct {
+            fn call(_: nkl_http.RequestCompleteEvent) void {
+                const stats = app.global_stats orelse return;
+                _ = stats.requests_completed.fetchAdd(1, .monotonic);
+            }
+        }.call,
+        .on_request_error = struct {
+            fn call(_: nkl_http.RequestErrorEvent) void {
+                const stats = app.global_stats orelse return;
+                _ = stats.request_errors.fetchAdd(1, .monotonic);
+            }
+        }.call,
+        .on_worker_error = struct {
+            fn call(_: nkl_http.WorkerErrorEvent) void {
+                const stats = app.global_stats orelse return;
+                _ = stats.worker_errors.fetchAdd(1, .monotonic);
+            }
+        }.call,
+        .on_accept_error = struct {
+            fn call(_: nkl_http.AcceptErrorEvent) void {
+                const stats = app.global_stats orelse return;
+                _ = stats.accept_errors.fetchAdd(1, .monotonic);
+            }
+        }.call,
+        .on_dispatch_error = struct {
+            fn call(_: nkl_http.DispatchErrorEvent) void {
+                const stats = app.global_stats orelse return;
+                _ = stats.dispatch_errors.fetchAdd(1, .monotonic);
             }
         }.call,
     };
@@ -48,6 +87,10 @@ pub fn main(init: std.process.Init) !void {
         hooks,
         app.handleRequest,
     );
+    app.global_runtime = &runtime;
+    app.global_stats = &shared_stats;
+    defer app.global_runtime = null;
+    defer app.global_stats = null;
 
     try runtime.run();
 }
@@ -120,7 +163,14 @@ fn printUsage() void {
         \\  GET  /ssr         -> SSR + Wasm enhancement page
         \\  GET  /form        -> SSR form page
         \\  POST /form        -> form submit and redirect
+        \\  GET  /stream      -> writer-oriented SSR page
         \\  GET  /lab/svg     -> CSR / SPA-style SVG lab
+        \\  GET  /api/health  -> JSON health endpoint
+        \\  GET  /api/demo/info
+        \\  POST /api/demo/echo
+        \\  DELETE /api/demo/reset
+        \\  GET  /api/demo/ops
+        \\  GET  /demo/file   -> conditional and range file demo
         \\  GET  /api/message -> small text endpoint for Wasm fetch
         \\
     , .{});

@@ -1,9 +1,24 @@
 const std = @import("std");
 const nkl_http = @import("nkl_http");
 
+pub const RuntimeType = nkl_http.Runtime(AppContext);
+
+pub const SharedStats = struct {
+    requests_started: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    requests_completed: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    request_errors: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    worker_errors: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    accept_errors: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+    dispatch_errors: std.atomic.Value(usize) = std.atomic.Value(usize).init(0),
+};
+
 pub const AppContext = struct {
     service_name: []const u8 = "nkl-stack-playground",
+    stats: ?*SharedStats = null,
 };
+
+pub var global_runtime: ?*RuntimeType = null;
+pub var global_stats: ?*SharedStats = null;
 
 const page = @import("page.zig");
 const site_wasm_asset = @import("site_wasm_asset");
@@ -20,7 +35,6 @@ pub fn handleRequest(
     allocator: std.mem.Allocator,
     req: *std.http.Server.Request,
 ) anyerror!nkl_http.HandlerResult {
-    _ = io;
     const target = nkl_http.request.requestPath(req.head.target);
 
     if ((req.head.method == .GET or req.head.method == .HEAD) and std.mem.eql(u8, target, "/")) {
@@ -124,6 +138,91 @@ pub fn handleRequest(
         return .{ .body_state = .responded };
     }
 
+    if (req.head.method == .GET and std.mem.eql(u8, target, "/api/health")) {
+        const payload = try std.fmt.allocPrint(
+            allocator,
+            "{{\"ok\":true,\"service\":\"{s}\"}}\n",
+            .{ctx.service_name},
+        );
+        try nkl_http.response.respondJson(req, payload);
+        return .{ .body_state = .responded };
+    }
+
+    if (req.head.method == .GET and std.mem.eql(u8, target, "/api/demo/info")) {
+        const payload = try std.fmt.allocPrint(
+            allocator,
+            "{{\"service\":\"{s}\",\"routes\":{{\"health\":\"/api/health\",\"echo\":\"/api/demo/echo\",\"reset\":\"/api/demo/reset\",\"ops\":\"/api/demo/ops\",\"file\":\"/demo/file\"}},\"features\":[\"json\",\"bounded-body\",\"empty-response\",\"runtime-stats\",\"conditional-file\",\"range-file\"]}}\n",
+            .{ctx.service_name},
+        );
+        try nkl_http.response.respondJson(req, payload);
+        return .{ .body_state = .responded };
+    }
+
+    if (req.head.method == .POST and std.mem.eql(u8, target, "/api/demo/echo")) {
+        const body = nkl_http.body.readAllAlloc(allocator, req, 4096) catch |err| switch (err) {
+            error.RequestBodyTooLarge => {
+                try nkl_http.response.writeErrorResponse(req, .payload_too_large, "request body too large\n");
+                return .{ .body_state = .responded };
+            },
+            else => return err,
+        };
+        const payload = try std.fmt.allocPrint(
+            allocator,
+            "{{\"received_bytes\":{d},\"echo\":{f}}}\n",
+            .{ body.len, std.json.fmt(body, .{}) },
+        );
+        try nkl_http.response.respondJson(req, payload);
+        return .{ .body_state = .responded };
+    }
+
+    if (req.head.method == .DELETE and std.mem.eql(u8, target, "/api/demo/reset")) {
+        try nkl_http.response.respondEmpty(req, .no_content, &.{
+            .{ .name = "Cache-Control", .value = "no-store" },
+            .{ .name = "X-Reset-Mode", .value = "demo-noop" },
+        });
+        return .{ .body_state = .responded };
+    }
+
+    if ((req.head.method == .GET or req.head.method == .HEAD) and std.mem.eql(u8, target, "/api/demo/ops")) {
+        const runtime = global_runtime orelse return error.RuntimeUnavailable;
+        var stats = try runtime.statsAlloc(allocator);
+        defer stats.deinit(allocator);
+
+        const shared = ctx.stats orelse return error.StatsUnavailable;
+        const worker_pool = stats.worker_pool orelse return error.WorkerPoolUnavailable;
+        const queue_json = try formatQueueDepthsJson(allocator, worker_pool.queue_depths);
+        const actual_port_json = if (stats.actual_port) |port|
+            try std.fmt.allocPrint(allocator, "{d}", .{port})
+        else
+            "null";
+        const payload = try std.fmt.allocPrint(
+            allocator,
+            "{{\"running\":{s},\"actual_port\":{s},\"requests_started\":{d},\"requests_completed\":{d},\"request_errors\":{d},\"worker_errors\":{d},\"accept_errors\":{d},\"dispatch_errors\":{d},\"active_sessions\":{d},\"total_created_sessions\":{d},\"total_closed_sessions\":{d},\"queue_depths\":{s}}}\n",
+            .{
+                if (stats.is_running) "true" else "false",
+                actual_port_json,
+                shared.requests_started.load(.monotonic),
+                shared.requests_completed.load(.monotonic),
+                shared.request_errors.load(.monotonic),
+                shared.worker_errors.load(.monotonic),
+                shared.accept_errors.load(.monotonic),
+                shared.dispatch_errors.load(.monotonic),
+                worker_pool.session_stats.active_sessions,
+                worker_pool.session_stats.total_created,
+                worker_pool.session_stats.total_closed,
+                queue_json,
+            },
+        );
+        try nkl_http.response.respondJson(req, payload);
+        return .{ .body_state = .responded };
+    }
+
+    if ((req.head.method == .GET or req.head.method == .HEAD) and std.mem.eql(u8, target, "/demo/file")) {
+        const abs_path = try ensureDemoFile(io);
+        try nkl_http.file_response.serveAbsolutePath(io, req, abs_path, "text/plain; charset=utf-8");
+        return .{ .body_state = .responded };
+    }
+
     if (req.head.method == .GET and std.mem.eql(u8, target, "/api/message")) {
         const payload = try std.fmt.allocPrint(
             allocator,
@@ -210,4 +309,48 @@ test "parseInitialCount falls back cleanly" {
     try std.testing.expectEqual(@as(usize, 3), parseInitialCount("/"));
     try std.testing.expectEqual(@as(usize, 9), parseInitialCount("/?count=9"));
     try std.testing.expectEqual(@as(usize, 3), parseInitialCount("/?count=nope"));
+}
+
+fn formatQueueDepthsJson(allocator: std.mem.Allocator, queue_depths: []const usize) ![]u8 {
+    var list = std.ArrayList(u8).empty;
+    defer list.deinit(allocator);
+
+    try list.append(allocator, '[');
+    for (queue_depths, 0..) |depth, index| {
+        if (index > 0) try list.append(allocator, ',');
+        var depth_buffer: [32]u8 = undefined;
+        const depth_text = std.fmt.bufPrint(&depth_buffer, "{d}", .{depth}) catch "0";
+        try list.appendSlice(allocator, depth_text);
+    }
+    try list.append(allocator, ']');
+    return list.toOwnedSlice(allocator);
+}
+
+fn ensureDemoFile(io: std.Io) ![]const u8 {
+    const dir_path = "/tmp/nkl-stack-playground";
+    const file_path = "/tmp/nkl-stack-playground/backend-demo.txt";
+
+    std.Io.Dir.createDirAbsolute(io, dir_path, .default_dir) catch |err| switch (err) {
+        error.PathAlreadyExists => {},
+        else => return err,
+    };
+
+    var file = std.Io.Dir.openFileAbsolute(io, file_path, .{}) catch |err| switch (err) {
+        error.FileNotFound => blk: {
+            var created = try std.Io.Dir.createFileAbsolute(io, file_path, .{ .truncate = true });
+            var writer_buffer: [1024]u8 = undefined;
+            var writer = created.writer(io, &writer_buffer);
+            try writer.interface.writeAll(
+                "nkl-stack-playground backend file demo\n" ++
+                "This file exists to exercise nkl-http file_response helpers.\n" ++
+                "Try GET, HEAD, If-None-Match, If-Modified-Since, and Range requests.\n" ++
+                "Example: Range: bytes=0-31\n",
+            );
+            try writer.interface.flush();
+            break :blk created;
+        },
+        else => return err,
+    };
+    file.close(io);
+    return file_path;
 }

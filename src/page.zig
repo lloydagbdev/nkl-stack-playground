@@ -59,6 +59,17 @@ pub fn renderLanding(allocator: std.mem.Allocator, model: LandingModel) ![]u8 {
                         try h.li(&.{}, &.{try h.text("nkl-wasm: explicit Wasm and browser bridge")}),
                     }),
                 }),
+                try h.section(&.{try h.class("panel")}, &.{
+                    try h.h2(&.{}, &.{try h.text("Backend notes")}),
+                    try h.p(&.{try h.class("panel-copy")}, &.{try h.text("The playground now covers more than pages and Wasm. It also exposes small backend routes that exercise practical nkl-http server helpers.")}),
+                    try h.ul(&.{try h.class("library-list")}, &.{
+                        try h.li(&.{}, &.{try h.text("/api/health returns a JSON health payload suitable for uptime checks.")}),
+                        try h.li(&.{}, &.{try h.text("/api/demo/echo reads a bounded request body and returns JSON.")}),
+                        try h.li(&.{}, &.{try h.text("/api/demo/reset shows an explicit 204 No Content response path.")}),
+                        try h.li(&.{}, &.{try h.text("/api/demo/ops exposes runtime counters and worker/session stats.")}),
+                        try h.li(&.{}, &.{try h.text("/demo/file demonstrates ETag, Last-Modified, Range, 206, and 416 handling.")}),
+                    }),
+                }),
             }),
         },
     });

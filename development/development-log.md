@@ -361,6 +361,49 @@
   - SSR plus Wasm enhancement
   - CSR/SPA-style Wasm rendering
 
+## 2026-04-03 - backend surface expansion
+
+- Expanded backend coverage so the playground demonstrates more of `nkl-http`
+  than just basic routing and a single text fetch endpoint.
+- Added:
+  - `/api/health`
+  - `/api/demo/info`
+  - `/api/demo/echo`
+  - `/api/demo/reset`
+  - `/api/demo/ops`
+  - `/demo/file`
+
+### Decision
+
+- Kept the new backend routes small and explicit rather than building a fake
+  application domain around them.
+- Added a runtime-generated sample file under `/tmp/nkl-stack-playground/` so
+  the file demo can exercise real `nkl_http.file_response` behavior in both
+  local runs and the scratch-container deployment.
+- Added request and runtime counters through `nkl-http` hooks so the playground
+  can expose operational state through `/api/demo/ops` without introducing a
+  larger admin subsystem.
+
+### Coverage Added
+
+- `/api/health`
+  - JSON health payload
+- `/api/demo/info`
+  - structured JSON route discovery
+- `/api/demo/echo`
+  - bounded raw body read and JSON echo response
+- `/api/demo/reset`
+  - `204 No Content` response helper usage
+- `/api/demo/ops`
+  - runtime stats snapshot plus hook-driven counters
+- `/demo/file`
+  - conditional request handling
+  - `ETag`
+  - `Last-Modified`
+  - `Range`
+  - `206 Partial Content`
+  - `416 Range Not Satisfiable`
+
 ## Follow-On Ideas
 
 - Add a small form-oriented page to compare document-heavy SSR with more
