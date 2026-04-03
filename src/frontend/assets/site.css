@@ -1,0 +1,387 @@
+:root {
+  color-scheme: light dark;
+  --bg: #f6f8fa;
+  --panel: #f6f8fa;
+  --panel-subtle: #ffffff;
+  --code-bg: #eef2f6;
+  --line: #d0d7de;
+  --line-strong: #afb8c1;
+  --text: #1f2328;
+  --text-soft: #59636e;
+  --text-faint: #6e7781;
+  --accent: #0969da;
+  --accent-soft: rgba(9, 105, 218, 0.12);
+  --success: #1a7f37;
+  --teal: #1f6f78;
+  --brick: #a34d3a;
+  --shadow: none;
+  --radius-lg: 6px;
+  --radius-md: 4px;
+  --radius-sm: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --panel: #0d1117;
+    --panel-subtle: #161b22;
+    --code-bg: #141a22;
+    --line: #30363d;
+    --line-strong: #484f58;
+    --text: #e6edf3;
+    --text-soft: #9da7b1;
+    --text-faint: #7d8590;
+    --accent: #2f81f7;
+    --accent-soft: rgba(47, 129, 247, 0.12);
+    --success: #3fb950;
+    --teal: #56b6c2;
+    --brick: #ff967d;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+a,
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.page {
+  width: min(1040px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 24px 0 32px;
+}
+
+.hero,
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.hero {
+  padding: 20px 20px 16px;
+  margin-bottom: 16px;
+}
+
+.panel {
+  padding: 16px 16px 18px;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--text-faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+h3,
+p,
+ul {
+  margin-top: 0;
+}
+
+h1 {
+  margin-bottom: 8px;
+  font-size: 1.6rem;
+  line-height: 1.25;
+}
+
+h2 {
+  margin-bottom: 8px;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+
+h3 {
+  margin-bottom: 6px;
+  font-size: 0.98rem;
+  line-height: 1.35;
+}
+
+.lead,
+.panel-copy,
+.status,
+.stored-message {
+  color: var(--text-soft);
+}
+
+.playground-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.nav-link,
+.mode-card {
+  text-decoration: none;
+}
+
+.nav-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  color: var(--text-soft);
+  font-weight: 600;
+  transition: border-color 140ms ease, color 140ms ease, background-color 140ms ease;
+}
+
+.nav-link:hover,
+.mode-card:hover {
+  border-color: var(--line-strong);
+  color: var(--text);
+}
+
+.mode-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.mode-card {
+  display: block;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel-subtle);
+  color: var(--text);
+}
+
+.mode-card h3,
+.mode-card p {
+  margin-bottom: 6px;
+}
+
+.library-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-soft);
+}
+
+.counter-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 16px 0 12px;
+}
+
+.label,
+.form-label {
+  color: var(--text-faint);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.count-value {
+  font-size: clamp(1.8rem, 7vw, 3.6rem);
+  line-height: 1;
+  color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-subtle);
+  color: var(--text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.action-button:hover {
+  border-color: var(--line-strong);
+  background: var(--panel);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.action-button.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.action-button-secondary {
+  color: var(--text-soft);
+}
+
+.status-subtle {
+  font-size: 0.95rem;
+}
+
+.status-success {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.message-body,
+.svg-root {
+  margin-top: 12px;
+}
+
+.message-body {
+  padding: 14px 16px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--code-bg);
+  color: var(--text);
+  font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
+}
+
+.demo-form {
+  display: grid;
+  gap: 14px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.form-input {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--panel-subtle);
+  color: var(--text);
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.form-textarea {
+  min-height: 120px;
+  resize: vertical;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.result-panel[data-accent="amber"] {
+  border-color: var(--line-strong);
+}
+
+.result-panel[data-accent="teal"] .result-label {
+  color: var(--teal);
+}
+
+.result-panel[data-accent="brick"] .result-label {
+  color: var(--brick);
+}
+
+.result-row {
+  margin-bottom: 8px;
+}
+
+.result-label {
+  color: var(--accent);
+}
+
+.svg-root {
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--panel-subtle);
+}
+
+.lab-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.lab-bg {
+  fill: var(--code-bg);
+}
+
+.lab-wave {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lab-dot {
+  fill: var(--teal);
+  stroke: var(--panel-subtle);
+  stroke-width: 2;
+}
+
+.lab-highlight {
+  fill: transparent;
+  stroke: var(--brick);
+  stroke-width: 4;
+}
+
+.lab-copy {
+  fill: var(--text-soft);
+  font-family: ui-monospace, SFMono-Regular, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 14px;
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: calc(100vw - 16px);
+    padding: 8px 0 18px;
+  }
+
+  .hero,
+  .panel {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}
